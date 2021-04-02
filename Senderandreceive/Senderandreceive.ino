@@ -15,15 +15,18 @@ uint8_t broadcastAddress[] = {0xCC, 0x50, 0xE3, 0x0B, 0x99, 0x54};
 
 // ID harus unik
 const int id = 1;
-
+byte success = 0;
 // struktur untuk pengiriman data harus sama dengan struktur pada penerima
 typedef struct struct_message {
   int id;
   int x;
-  int y;
+  int y[20];
   int lati[4];
   int longi[4];
 } struct_message;
+
+byte counter = 0;
+unsigned long max_delay = 0;
 
 struct_message myData;
 
@@ -35,12 +38,12 @@ void OnDataSent(uint8_t *mac_addr, uint8_t status)
 #endif
 {
   now = millis();
-  Serial.print("Status pengiriman:\t");
+  Serial.printf("Status pengiriman %d:\t", counter);
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Sukses" : "Gagal");
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   WiFi.mode(WIFI_STA);
 
   // Init ESP-NOW
@@ -95,43 +98,49 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *incomingData, uint8_t len)
 #endif
 {
   interval = millis() - now;
+  if (max_delay <= interval) max_delay = interval;
   char macStr[18];
 
   Serial.println();
-  Serial.print("Paket diterima dari: ");
-  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  Serial.println(macStr);
+  //Serial.print("Paket diterima dari: ");
+  //snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+  //         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  //Serial.println(macStr);
 
   memcpy(&myData, incomingData, sizeof(myData));
   Serial.printf("ID: %u (%u byte)\n", myData.id, len);
   Serial.printf("Delay: %lu \n", interval);
-
-  Serial.printf("Panjang data: %d \n", myData.x);
-  Serial.printf("Dummy: %d \n", myData.y);
+  Serial.printf("Data: %d byte\n", myData.x);
+  //Serial.printf("Dummy: %d \n", myData.y);
 
   float a;
   //byte array to float
   for (byte i = 0; i < 4; i++) {
     ((uint8_t*)&a)[i] = myData.lati[i];
   }
-  Serial.printf("Latitude: %f bytes\n", a);
+  Serial.printf("Pos: %f, ", a);
 
   for (byte i = 0; i < 4; i++) {
     ((uint8_t*)&a)[i] = myData.longi[i];
   }
-  Serial.printf("Longitude: %f bytes\n", a);
-
+  Serial.printf("%f\n", a);
+  success++;
+  Serial.printf("Success: %d/%d\n", success, myData.id);
   Serial.println();
 }
 
-byte counter = 0;
 void loop() {
-  counter++;
+  if (counter == 100) {
+    Serial.printf("Delay maksimal: %ul, sukses: %d/%d\n", max_delay, success, myData.id);
+    counter++;
+  }
+  if (counter >= 100) {
+    return;
+  } counter++;
   // Nilai untuk dikirim
   myData.id = counter;
   myData.x = 0;
-  myData.y = WiFi.RSSI();//random(0, 50);
+  myData.y[0] = WiFi.RSSI();//random(0, 50);
   for (byte i = 0; i < 4; i++) {
     myData.lati[i] = 0;
     myData.longi[i] = 0;
@@ -143,17 +152,17 @@ void loop() {
   int result;
 #endif
 
-  Serial.print("Permintaan Pengiriman ");
+  //Serial.print("Permintaan Pengiriman ");
   result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
 
   if (result == ESP_OK) {
     //Serial.print("x (dummy):"); Serial.println(myData.x, DEC);
-    //Serial.print("y:"); Serial.println(myData.y, DEC);
-    Serial.println("berhasil");
+    //Serial.print("y:"); Serial.println(myData.y[0], DEC);
+    //Serial.println("berhasil");
   }
   else {
-    Serial.println("gagal");
+    //Serial.println("gagal");
   }
 
-  delay(5000);
+  delay(1000);
 }

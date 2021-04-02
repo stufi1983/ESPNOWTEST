@@ -18,7 +18,7 @@ TinyGPS gps;
 typedef struct struct_message {
   int id;
   int x;
-  int y;
+  int y[20];
   int lati[4];
   int longi[4];
 } struct_message;
@@ -129,7 +129,7 @@ void loop() {
     datareceived = false;
     //myData.id = myData.id;
     myData.x = rec_len;
-    myData.y = WiFi.RSSI();
+    myData.y[0] = WiFi.RSSI();
 
     byte dataArray[4] = {
       ((uint8_t*)&new_lati)[0],
