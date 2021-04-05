@@ -18,7 +18,7 @@ TinyGPS gps;
 typedef struct struct_message {
   int id;
   int x;
-  int y[20];
+  int y[1];
   int lati[4];
   int longi[4];
 } struct_message;

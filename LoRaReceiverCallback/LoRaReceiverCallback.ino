@@ -4,9 +4,10 @@
 #ifdef ARDUINO_SAMD_MKRWAN1300
 #error "This example is not compatible with the Arduino MKR WAN 1300 board!"
 #endif
-
+byte counter = 0;
+int total = 0;
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   while (!Serial);
 
   Serial.println("LoRa Receiver Callback");
@@ -18,7 +19,7 @@ void setup() {
 
   // Uncomment the next line to disable the default AGC and set LNA gain, values between 1 - 6 are supported
   // LoRa.setGain(6);
-  
+
   // register the receive callback
   LoRa.onReceive(onReceive);
 
@@ -32,11 +33,28 @@ void loop() {
 
 void onReceive(int packetSize) {
   // received a packet
-  Serial.print("Received packet '");
+  counter++;
+  if (counter == 100) {
+    Serial.print(counter);
+    Serial.println("/100");
+    counter++;
+  }
+  if(counter>100) return;
+  Serial.print("Received ");
+  Serial.print(counter);
+  Serial.print(" packet '");
 
+  String temp;
   // read packet
   for (int i = 0; i < packetSize; i++) {
-    Serial.print((char)LoRa.read());
+    temp += (char)LoRa.read();
+  }
+  Serial.print(temp);
+  temp = temp.substring(3, temp.length());
+  total = temp.toInt();
+
+  if (total <= 1) {
+    counter = 1;
   }
 
   // print RSSI of packet
